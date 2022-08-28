@@ -141,17 +141,20 @@ public static class AvatarMaskFunctions
         return paths;
     }
         
-    static AvatarMask GenerateEmptyMask()
+    static AvatarMask GenerateEmptyMask(bool addEmptyTransform)
     {
         AvatarMask mask = new AvatarMask();
         //AvatarMaskBodyPart[] avatarMaskBodyParts = (AvatarMaskBodyPart[])Enum.GetValues(typeof(AvatarMaskBodyPart));
         for (int j = 0; j < (int)AvatarMaskBodyPart.LastBodyPart; j++)
             mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)j, false);
 
-        GameObject temp = new GameObject();
-        mask.AddTransformPath(temp.transform);
-        mask.SetTransformPath(0, "peepeepoopoo");
-        GameObject.DestroyImmediate(temp);
+        if (addEmptyTransform)
+        {
+            GameObject temp = new GameObject();
+            mask.AddTransformPath(temp.transform);
+            mask.SetTransformPath(0, "peepeepoopoo");
+            GameObject.DestroyImmediate(temp);
+        }
 
         return mask;
     }
@@ -224,7 +227,7 @@ public static class AvatarMaskFunctions
     }
 #endif
 
-    static AvatarMask MergeAvatarMasks(AvatarMask maskToMergeTo, AvatarMask maskToMergeFrom)
+    public static AvatarMask MergeAvatarMasks(AvatarMask maskToMergeFrom, AvatarMask maskToMergeTo)
     {
         EditorUtility.SetDirty(maskToMergeTo);
 
@@ -285,8 +288,8 @@ public static class AvatarMaskFunctions
     public static AvatarMask GenerateMaskFromLayer(AnimatorController controller, int index, bool maskTransformsOnly) {
         AnimatorControllerLayer layer = controller.layers[index];
         List<AnimationClip> layerClips = GetAnimationsInMachine(layer.stateMachine);
-            
-        AvatarMask newMask = GenerateEmptyMask();
+
+        AvatarMask newMask = new AvatarMask();// GenerateEmptyMask(false);
 
         bool addedBones = false;
         List<string> addedPaths = new List<string>();
@@ -316,10 +319,10 @@ public static class AvatarMaskFunctions
         {
             GameObject placeholder = new GameObject();
             // add transforms
-            for (int j = 0; j < addedPaths.Count; j++)
+            for (int i = 0; i < addedPaths.Count; i++)
             {
                 newMask.AddTransformPath(placeholder.transform);
-                newMask.SetTransformPath(j+1, addedPaths[j]);
+                newMask.SetTransformPath(i, addedPaths[i]);
             }
             GameObject.DestroyImmediate(placeholder);
         }
