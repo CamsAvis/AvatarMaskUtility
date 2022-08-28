@@ -279,7 +279,7 @@ public static class AvatarMaskFunctions
                 }
             } else if (!existsInOld) {
                 maskToMergeTo.AddTransformPath(placeholder.transform);
-                maskToMergeTo.SetTransformActive(maskToMergeFrom.transformCount - 1, isActive);
+                maskToMergeTo.SetTransformActive(maskToMergeTo.transformCount - 1, isActive);
             }
         }
         GameObject.DestroyImmediate(placeholder);
