@@ -166,8 +166,7 @@ public static class AvatarMaskFunctions
         
         // get gesture and fx layer
         AnimatorController gesture = descriptor.baseAnimationLayers[2].animatorController as AnimatorController;
-        AnimatorController fx = descriptor.baseAnimationLayers[4].animatorController as AnimatorController;
-        if (gesture == null || fx == null)
+        if (gesture == null)
         {
             Debug.LogWarning("Gesture controller and FX controller not assigned");
             return null;
@@ -195,24 +194,31 @@ public static class AvatarMaskFunctions
             mask.SetTransformPath(i, allTransformPaths[i]);
             maskDict[allTransformPaths[i]] = i;
         }
-        GameObject.DestroyImmediate(placeholder);
 
         // 1. get all animation clips in the controller
         // 2. for each animation clip, get the paths of all animated properties
         // 3. disable the paths of the animated properties
         foreach(AnimationClip animation in gesture.animationClips) {
-            foreach (string path in GetPathsInAnimation(animation, false)) {
-                if(maskDict.ContainsKey(path))
+            foreach (string path in GetPathsInAnimation(animation, false))
+            {
+                if (maskDict.ContainsKey(path)) {
                     mask.SetTransformActive(maskDict[path], false);
+                } else {
+                    mask.AddTransformPath(placeholder.transform);
+                    mask.SetTransformPath(mask.transformCount - 1, path);
+                    mask.SetTransformActive(mask.transformCount - 1, false);
+                }
             }
         }
+
+        GameObject.DestroyImmediate(placeholder);
 
         // disable all body parts in mask
         for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
             mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
 
         // save and return
-        string savePath = AssetDatabase.GenerateUniqueAssetPath($"{directory}/MasterMask_{fx.name}.asset");
+        string savePath = AssetDatabase.GenerateUniqueAssetPath($"{directory}/MasterMask_{gesture.name}.asset");
         AssetDatabase.CreateAsset(mask, savePath);
         return mask;
     }
