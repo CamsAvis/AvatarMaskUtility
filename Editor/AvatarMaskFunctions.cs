@@ -224,6 +224,21 @@ public static class AvatarMaskFunctions
     }
 #endif
 
+    static AvatarMask MergeAvatarMasks(AvatarMask maskToMergeTo, AvatarMask maskToMergeFrom)
+    {
+        EditorUtility.SetDirty(maskToMergeTo);
+
+        GameObject placeholder = new GameObject();
+        for (int i = 0; i < maskToMergeFrom.transformCount; i++)
+        {
+            maskToMergeTo.AddTransformPath(placeholder.transform);
+            maskToMergeTo.SetTransformPath(maskToMergeTo.transformCount - 1, maskToMergeFrom.GetTransformPath(i));
+        }
+        GameObject.DestroyImmediate(placeholder);
+
+        return maskToMergeTo;
+    }
+
     static void GetAllTransformPaths(Transform relative, Transform transform, ref List<string> paths) {
         if (transform != null) {
             paths.Add(transform.GetHierarchyPath(relative));
