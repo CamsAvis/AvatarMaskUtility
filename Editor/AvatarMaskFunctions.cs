@@ -227,26 +227,73 @@ public static class AvatarMaskFunctions
     }
 #endif
 
-    public static AvatarMask MergeAvatarMasks(AvatarMask maskToMergeFrom, AvatarMask maskToMergeTo)
+    public enum AvatarMaskBoneOverwriteMode
+    {
+        OVERWRITE_ALL,
+        OVERWRITE_NONE,
+        OVERWRITE_ONLY_ACTIVE,
+        OVERWRITE_ONLY_INACTIVE,
+    }
+
+    public static void MergeAvatarMasks(AvatarMask maskToMergeFrom, 
+        ref AvatarMask maskToMergeTo, bool overwriteDuplicates, AvatarMaskBoneOverwriteMode boneOverwiteMode)
     {
         EditorUtility.SetDirty(maskToMergeTo);
 
+        // map the old mask
+        Dictionary<string, int> mergeToPaths = new Dictionary<string, int>();
+        foreach (int index in Enumerable.Range(0, maskToMergeTo.transformCount)) {
+            mergeToPaths[maskToMergeTo.GetTransformPath(index)] = index;
+        }
+
+        // transforms
         GameObject placeholder = new GameObject();
-        for (int i = 0; i < maskToMergeFrom.transformCount; i++)
+        for(int tIdx = 0; tIdx < maskToMergeFrom.transformCount; tIdx++)
         {
-            maskToMergeTo.AddTransformPath(placeholder.transform);
-            maskToMergeTo.SetTransformPath(maskToMergeTo.transformCount - 1, maskToMergeFrom.GetTransformPath(i));
+            // check if current transform exists in old mask
+            //      if exists and we overwrite, overwrite
+            //      if exists and we don't overwrite, continue
+            //      if !exists, add to end
+
+            string path = maskToMergeFrom.GetTransformPath(tIdx);
+            bool isActive = maskToMergeFrom.GetTransformActive(tIdx);
+
+            bool existsInOld = mergeToPaths.TryGetValue(path, out int oldIndex);
+
+            if (existsInOld && overwriteDuplicates) {
+                maskToMergeTo.SetTransformActive(oldIndex, isActive);
+            } else if (!existsInOld) {
+                maskToMergeTo.AddTransformPath(placeholder.transform);
+                maskToMergeTo.SetTransformActive(maskToMergeFrom.transformCount - 1, isActive);
+            }
         }
         GameObject.DestroyImmediate(placeholder);
 
-        return maskToMergeTo;
-    }
+        // bones only if replace
+        if (boneOverwiteMode != AvatarMaskBoneOverwriteMode.OVERWRITE_NONE)
+        {
+            for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
+            {
+                AvatarMaskBodyPart currentBodyPart = (AvatarMaskBodyPart)i;
+                bool newBodyPartActive = maskToMergeFrom.GetHumanoidBodyPartActive(currentBodyPart);
 
-    static void GetAllTransformPaths(Transform relative, Transform transform, ref List<string> paths) {
-        if (transform != null) {
-            paths.Add(transform.GetHierarchyPath(relative));
-            foreach (Transform t in transform.GetComponentInChildren<Transform>())
-                GetAllTransformPaths(relative, t, ref paths);
+                switch(boneOverwiteMode)
+                {
+                    case AvatarMaskBoneOverwriteMode.OVERWRITE_ALL:
+                        maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
+                        break;
+                    case AvatarMaskBoneOverwriteMode.OVERWRITE_ONLY_ACTIVE:
+                        if (maskToMergeTo.GetHumanoidBodyPartActive(currentBodyPart)) {
+                            maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
+                        }
+                        break;
+                    case AvatarMaskBoneOverwriteMode.OVERWRITE_ONLY_INACTIVE:
+                        if (!maskToMergeTo.GetHumanoidBodyPartActive(currentBodyPart)) {
+                            maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
+                        }
+                        break;
+                }
+            }
         }
     }
 
