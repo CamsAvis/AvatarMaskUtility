@@ -204,12 +204,8 @@ public static class AvatarMaskFunctions
         foreach(AnimationClip animation in gesture.animationClips) {
             foreach (string path in GetPathsInAnimation(animation, false))
             {
-                if (maskDict.ContainsKey(path)) {
+                if (maskDict.ContainsKey(path) && path.Length > 0) {
                     mask.SetTransformActive(maskDict[path], false);
-                } else {
-                    mask.AddTransformPath(placeholder.transform);
-                    mask.SetTransformPath(mask.transformCount - 1, path);
-                    mask.SetTransformActive(mask.transformCount - 1, false);
                 }
             }
         }
@@ -227,16 +223,16 @@ public static class AvatarMaskFunctions
     }
 #endif
 
-    public enum AvatarMaskOverwriteMode
+    public enum AvatarMaskOverrideMode
     {
-        OverwriteAll,
-        OverwriteNone,
-        OverwriteOnlyActive,
-        OverwriteOnlyInactive,
+        OverrideAll,
+        OverrideNone,
+        OverrideOnlyActive,
+        OverrideOnlyInactive,
     }
 
     public static void MergeAvatarMasks(AvatarMask maskToMergeFrom, 
-        ref AvatarMask maskToMergeTo, AvatarMaskOverwriteMode xformOverwriteMode, AvatarMaskOverwriteMode boneOverwiteMode)
+        ref AvatarMask maskToMergeTo, AvatarMaskOverrideMode xformOverwriteMode, AvatarMaskOverrideMode boneOverrideMode)
     {
         EditorUtility.SetDirty(maskToMergeTo);
 
@@ -260,18 +256,18 @@ public static class AvatarMaskFunctions
 
             bool existsInOld = mergeToPaths.TryGetValue(path, out int oldIndex);
 
-            if (existsInOld && xformOverwriteMode != AvatarMaskOverwriteMode.OverwriteNone) {
+            if (existsInOld && xformOverwriteMode != AvatarMaskOverrideMode.OverrideNone) {
                 switch(xformOverwriteMode)
                 {
-                    case AvatarMaskOverwriteMode.OverwriteAll:
+                    case AvatarMaskOverrideMode.OverrideAll:
                         maskToMergeTo.SetTransformActive(oldIndex, isActive);
                         break;
-                    case AvatarMaskOverwriteMode.OverwriteOnlyActive:
+                    case AvatarMaskOverrideMode.OverrideOnlyActive:
                         if(maskToMergeTo.GetTransformActive(oldIndex)) {
                             maskToMergeTo.SetTransformActive(oldIndex, isActive);
                         }
                         break;
-                    case AvatarMaskOverwriteMode.OverwriteOnlyInactive:
+                    case AvatarMaskOverrideMode.OverrideOnlyInactive:
                         if (!maskToMergeTo.GetTransformActive(oldIndex)) {
                             maskToMergeTo.SetTransformActive(oldIndex, isActive);
                         }
@@ -285,24 +281,24 @@ public static class AvatarMaskFunctions
         GameObject.DestroyImmediate(placeholder);
 
         // bones only if replace
-        if (boneOverwiteMode != AvatarMaskOverwriteMode.OverwriteNone)
+        if (boneOverrideMode != AvatarMaskOverrideMode.OverrideNone)
         {
             for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
             {
                 AvatarMaskBodyPart currentBodyPart = (AvatarMaskBodyPart)i;
                 bool newBodyPartActive = maskToMergeFrom.GetHumanoidBodyPartActive(currentBodyPart);
 
-                switch(boneOverwiteMode)
+                switch(boneOverrideMode)
                 {
-                    case AvatarMaskOverwriteMode.OverwriteAll:
+                    case AvatarMaskOverrideMode.OverrideAll:
                         maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
                         break;
-                    case AvatarMaskOverwriteMode.OverwriteOnlyActive:
+                    case AvatarMaskOverrideMode.OverrideOnlyActive:
                         if (maskToMergeTo.GetHumanoidBodyPartActive(currentBodyPart)) {
                             maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
                         }
                         break;
-                    case AvatarMaskOverwriteMode.OverwriteOnlyInactive:
+                    case AvatarMaskOverrideMode.OverrideOnlyInactive:
                         if (!maskToMergeTo.GetHumanoidBodyPartActive(currentBodyPart)) {
                             maskToMergeTo.SetHumanoidBodyPartActive(currentBodyPart, newBodyPartActive);
                         }
@@ -353,6 +349,10 @@ public static class AvatarMaskFunctions
 
         AvatarMask newMask = new AvatarMask();// GenerateEmptyMask(false);
 
+        // disable all bones by default
+        for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
+            newMask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
+
         bool addedBones = false;
         List<string> addedPaths = new List<string>();
         foreach (AnimationClip clip in layerClips)
@@ -360,11 +360,14 @@ public static class AvatarMaskFunctions
             if (clip == null)
                 continue;
 
+            Debug.Log($"Clip Name: {clip.name}");
+
             List<string> allPaths = GetPathsInAnimation(clip, maskTransformsOnly);
             foreach (string path in allPaths)
             {
                 if (path.Length < 1 || addedPaths.Contains(path))
                     continue;
+
                 addedPaths.Add(path);
             }
 
@@ -383,6 +386,7 @@ public static class AvatarMaskFunctions
             // add transforms
             for (int i = 0; i < addedPaths.Count; i++)
             {
+                Debug.Log($"\tAdding Path: {addedPaths[i]}");
                 newMask.AddTransformPath(placeholder.transform);
                 newMask.SetTransformPath(i, addedPaths[i]);
             }
