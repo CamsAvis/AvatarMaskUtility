@@ -160,7 +160,7 @@ public static class AvatarMaskFunctions
     }
 
 #if VRC_SDK_VRCSDK3
-    public static AvatarMask GenerateFXMasterMask(VRCAvatarDescriptor descriptor, string directory) {
+    public static AvatarMask GenerateFXMasterMask(VRCAvatarDescriptor descriptor) {
         // lmao wyd 
         if (!descriptor.customizeAnimationLayers || descriptor.baseAnimationLayers.Count() < 1) {
             Debug.LogWarning("Custom animator layers are not enabled");
@@ -217,8 +217,8 @@ public static class AvatarMaskFunctions
             mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
 
         // save and return
-        string savePath = AssetDatabase.GenerateUniqueAssetPath($"{directory}/MasterMask_{gesture.name}.asset");
-        AssetDatabase.CreateAsset(mask, savePath);
+        //string savePath = AssetDatabase.GenerateUniqueAssetPath($"{directory}/MasterMask_{gesture.name}.asset");
+        //AssetDatabase.CreateAsset(mask, savePath);
         return mask;
     }
 #endif
